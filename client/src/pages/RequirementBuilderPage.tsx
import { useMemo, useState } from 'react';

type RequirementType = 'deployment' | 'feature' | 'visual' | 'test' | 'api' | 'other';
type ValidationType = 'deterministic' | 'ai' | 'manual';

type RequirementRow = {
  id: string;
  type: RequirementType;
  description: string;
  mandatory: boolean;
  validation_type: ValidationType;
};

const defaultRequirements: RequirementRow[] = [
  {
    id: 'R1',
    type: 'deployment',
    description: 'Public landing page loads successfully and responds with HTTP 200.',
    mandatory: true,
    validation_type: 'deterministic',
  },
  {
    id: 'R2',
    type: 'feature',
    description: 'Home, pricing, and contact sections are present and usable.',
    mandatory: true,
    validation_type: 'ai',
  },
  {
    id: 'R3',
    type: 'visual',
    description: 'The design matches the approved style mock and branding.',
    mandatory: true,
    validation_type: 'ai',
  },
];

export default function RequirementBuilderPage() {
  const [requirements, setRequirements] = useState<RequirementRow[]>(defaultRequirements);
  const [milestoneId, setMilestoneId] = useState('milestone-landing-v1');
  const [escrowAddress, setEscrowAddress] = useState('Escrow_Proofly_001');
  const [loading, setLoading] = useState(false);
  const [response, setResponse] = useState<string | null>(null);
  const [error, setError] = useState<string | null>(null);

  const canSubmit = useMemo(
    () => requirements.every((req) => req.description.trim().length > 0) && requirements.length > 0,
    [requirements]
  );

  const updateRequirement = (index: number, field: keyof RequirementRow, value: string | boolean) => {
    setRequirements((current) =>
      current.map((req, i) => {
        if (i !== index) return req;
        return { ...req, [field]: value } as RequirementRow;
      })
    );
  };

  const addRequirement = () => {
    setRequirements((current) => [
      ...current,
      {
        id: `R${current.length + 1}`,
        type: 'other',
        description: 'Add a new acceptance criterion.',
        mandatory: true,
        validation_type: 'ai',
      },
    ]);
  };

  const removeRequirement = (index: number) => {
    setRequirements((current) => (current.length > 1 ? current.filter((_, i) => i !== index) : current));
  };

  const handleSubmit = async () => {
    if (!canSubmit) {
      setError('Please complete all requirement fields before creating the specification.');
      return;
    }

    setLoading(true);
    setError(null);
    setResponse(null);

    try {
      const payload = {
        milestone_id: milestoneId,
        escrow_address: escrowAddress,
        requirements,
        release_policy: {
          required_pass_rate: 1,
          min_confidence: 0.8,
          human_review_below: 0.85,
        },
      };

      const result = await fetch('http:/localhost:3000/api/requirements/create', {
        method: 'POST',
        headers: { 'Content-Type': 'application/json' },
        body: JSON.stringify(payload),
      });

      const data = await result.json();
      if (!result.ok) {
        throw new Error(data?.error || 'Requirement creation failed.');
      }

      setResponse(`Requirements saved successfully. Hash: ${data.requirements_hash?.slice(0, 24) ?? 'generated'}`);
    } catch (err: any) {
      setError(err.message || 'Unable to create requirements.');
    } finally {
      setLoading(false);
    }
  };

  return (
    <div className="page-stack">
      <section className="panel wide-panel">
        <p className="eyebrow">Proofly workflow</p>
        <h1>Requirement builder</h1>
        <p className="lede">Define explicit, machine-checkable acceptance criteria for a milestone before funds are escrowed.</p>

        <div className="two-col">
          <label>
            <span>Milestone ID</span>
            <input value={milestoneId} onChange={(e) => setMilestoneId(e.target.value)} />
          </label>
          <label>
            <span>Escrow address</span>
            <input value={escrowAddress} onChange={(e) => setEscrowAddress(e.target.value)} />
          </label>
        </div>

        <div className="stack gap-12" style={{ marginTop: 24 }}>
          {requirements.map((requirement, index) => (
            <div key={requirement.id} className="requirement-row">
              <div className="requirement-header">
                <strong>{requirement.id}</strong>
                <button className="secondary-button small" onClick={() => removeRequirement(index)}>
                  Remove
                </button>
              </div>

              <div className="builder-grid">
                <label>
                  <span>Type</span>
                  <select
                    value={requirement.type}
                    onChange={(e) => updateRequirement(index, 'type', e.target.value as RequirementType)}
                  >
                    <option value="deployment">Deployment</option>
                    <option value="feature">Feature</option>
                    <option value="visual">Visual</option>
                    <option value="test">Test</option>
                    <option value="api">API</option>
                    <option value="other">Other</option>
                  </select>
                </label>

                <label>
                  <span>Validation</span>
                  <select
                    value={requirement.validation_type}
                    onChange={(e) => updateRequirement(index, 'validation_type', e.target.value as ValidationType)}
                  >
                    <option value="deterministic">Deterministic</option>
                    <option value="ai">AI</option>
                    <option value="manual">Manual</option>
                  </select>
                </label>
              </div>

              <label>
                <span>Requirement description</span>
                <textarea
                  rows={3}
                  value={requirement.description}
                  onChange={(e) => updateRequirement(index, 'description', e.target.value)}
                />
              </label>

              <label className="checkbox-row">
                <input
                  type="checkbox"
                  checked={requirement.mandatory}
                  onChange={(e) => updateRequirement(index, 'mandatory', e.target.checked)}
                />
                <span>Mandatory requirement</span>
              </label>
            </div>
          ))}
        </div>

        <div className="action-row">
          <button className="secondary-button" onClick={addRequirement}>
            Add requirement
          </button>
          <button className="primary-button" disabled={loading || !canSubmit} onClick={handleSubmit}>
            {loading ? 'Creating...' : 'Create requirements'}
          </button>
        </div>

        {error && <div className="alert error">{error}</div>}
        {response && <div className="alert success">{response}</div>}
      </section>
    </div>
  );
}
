@@ -1,0 +1,94 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import EvaluationPage from './pages/EvaluationPage';
+import RequirementBuilderPage from './pages/RequirementBuilderPage';
+import EvidenceSubmissionPage from './pages/EvidenceSubmissionPage';
+import LiveDashboardPage from './pages/LiveDashboardPage';
+import AttestationVerificationPage from './pages/AttestationVerificationPage';
+import ReleaseStatusPage from './pages/ReleaseStatusPage';
+import ReputationPage from './pages/ReputationPage';
+import { WalletProvider } from './context/WalletContext';
+import './styles.css';
+
+const navItems = [
+  { to: '/', label: 'Home' },
+  { to: '/requirements', label: 'Requirements' },
+  { to: '/evidence', label: 'Evidence' },
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/evaluation', label: 'Evaluation' },
+  { to: '/verification', label: 'Verification' },
+  { to: '/release', label: 'Release' },
+  { to: '/reputation', label: 'Reputation' },
+];
+
+function Layout() {
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand-row">
+          <div className="brand-mark">P</div>
+          <div>
+            <div className="brand-name">Proofly</div>
+            <div className="eyebrow">AI-Verified Escrow</div>
+          </div>
+        </div>
+
+        <nav className="nav-list">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="sidebar-card">
+          <p className="eyebrow">Status</p>
+          <strong>MVP Live</strong>
+          <small style={{ display: 'block', marginTop: 8, color: '#c9d5eb' }}>
+            Solana Devnet + verification flow
+          </small>
+        </div>
+      </aside>
+
+      <div className="main-panel">
+        <header className="topbar">
+          <div className="search-box">Requirements → Evidence → Evaluation → Attestation → Release</div>
+          <div className="topbar-actions">
+            <span className="pill">API: localhost:3000</span>
+            <span className="pill muted">Verified flow</span>
+          </div>
+        </header>
+
+        <main className="content-area">
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/requirements" element={<RequirementBuilderPage />} />
+            <Route path="/evidence" element={<EvidenceSubmissionPage />} />
+            <Route path="/dashboard" element={<LiveDashboardPage />} />
+            <Route path="/evaluation" element={<EvaluationPage />} />
+            <Route path="/verification" element={<AttestationVerificationPage />} />
+            <Route path="/release" element={<ReleaseStatusPage />} />
+            <Route path="/reputation" element={<ReputationPage />} />
+            <Route path="*" element={<LandingPage />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <WalletProvider>
+      <BrowserRouter>
+        <Layout />
+      </BrowserRouter>
+    </WalletProvider>
+  </React.StrictMode>
+);

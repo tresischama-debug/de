@@ -1,0 +1,68 @@
+import { useState } from 'react';
+
+const starterAttestation = {
+  escrow: 'Escrow_Proofly_001',
+  milestone: 'milestone-landing-v1',
+  requirements_hash: '2a91c6e7d7ec54b29e71f89d3c87f3c70e8e1e2790d9dbdc0be8db9b31d73a4d',
+  evidence_hash: 'a4107aeb1f40c768d074e6397282316c7d268e384a4db7e1c2c39b52af7fb4bc',
+  decision: 1,
+  evaluator: '4G2Z3xP7yQD6fL3rrZ4nT4RJ5QzhVb45gYQ9fY3P1R3n',
+  issued_at: Math.floor(Date.now() / 1000),
+  expires_at: Math.floor(Date.now() / 1000) + 86400,
+  nonce: 201,
+  signature: 'ed25519:8b32be810a2767c5c8aa9e6e55f96fe5a584d7b1c291c7f0b8274c8d3d68d3a1',
+};
+
+export default function AttestationVerificationPage() {
+  const [attestation, setAttestation] = useState(JSON.stringify(starterAttestation, null, 2));
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const verify = async () => {
+    setLoading(true);
+    try {
+      const payload = JSON.parse(attestation);
+      const result = await fetch('http://localhost:3000/api/attestation/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attestation: payload,
+          expected_requirements_hash: payload.requirements_hash,
+          expected_evidence_hash: payload.evidence_hash,
+          expected_evaluator: payload.evaluator,
+        }),
+      });
+
+      const data = await result.json();
+      setVerified(Boolean(data.valid ?? result.ok));
+    } catch (error) {
+      setVerified(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="page-stack">
+      <section className="panel wide-panel">
+        <p className="eyebrow">Trust layer</p>
+        <h1>Attestation verification</h1>
+        <p className="lede">Verify the signed evaluator output before releasing funds from escrow.</p>
+
+        <textarea rows={16} value={attestation} onChange={(e) => setAttestation(e.target.value)} />
+
+        <div className="action-row">
+          <button className="primary-button" disabled={loading} onClick={verify}>
+            {loading ? 'Verifying...' : 'Verify attestation'}
+          </button>
+        </div>
+
+        {verified !== null && (
+          <div className={`alert ${verified ? 'success' : 'error'}`}>
+            {verified ? 'Attestation is valid and ready for on-chain release.' : 'Attestation verification failed.'}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

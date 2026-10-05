@@ -1,0 +1,200 @@
+import { useState } from 'react';
+
+type EvidenceType = 'url' | 'repository' | 'screenshot' | 'file' | 'text';
+
+type EvidenceItem = {
+  id: string;
+  type: EvidenceType;
+  content: string;
+  notes: string;
+  isPrivate: boolean;
+};
+
+const starterEvidence: EvidenceItem[] = [
+  {
+    id: 'E1',
+    type: 'url',
+    content: 'https://example.com',
+    notes: 'Public landing page URL for verification',
+    isPrivate: false,
+  },
+  {
+    id: 'E2',
+    type: 'repository',
+    content: 'https://github.com/example/project',
+    notes: 'Repository link for code review',
+    isPrivate: false,
+  },
+];
+
+export default function EvidenceSubmissionPage() {
+  const [milestoneId, setMilestoneId] = useState('milestone-landing-v1');
+  const [escrowAddress, setEscrowAddress] = useState('Escrow_Proofly_001');
+  const [freelancerAddress, setFreelancerAddress] = useState('Freelancer_Proofly_001');
+  const [evidence, setEvidence] = useState<EvidenceItem[]>(starterEvidence);
+  const [loading, setLoading] = useState(false);
+  const [response, setResponse] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const updateEvidence = (index: number, field: keyof EvidenceItem, value: string | boolean) => {
+    setEvidence((current) =>
+      current.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const addEvidenceItem = () => {
+    setEvidence((current) => [
+      ...current,
+      {
+        id: `E${current.length + 1}`,
+        type: 'file',
+        content: '',
+        notes: 'Add supporting evidence',
+        isPrivate: false,
+      },
+    ]);
+  };
+
+  const removeEvidence = (index: number) => {
+    setEvidence((current) => (current.length > 1 ? current.filter((_, i) => i !== index) : current));
+  };
+
+  const handleSubmit = async () => {
+    if (!milestoneId || !escrowAddress || evidence.some((item) => !item.content.trim())) {
+      setError('Please complete milestone data and every evidence item before submitting.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResponse(null);
+
+    try {
+      const payload = {
+        milestone_id: milestoneId,
+        escrow_address: escrowAddress,
+        freelancer_address: freelancerAddress,
+        evidence_items: evidence.map((item) => ({
+          id: item.id,
+          type: item.type,
+          content: item.content,
+          metadata: { notes: item.notes },
+          submitted_by: freelancerAddress,
+        })),
+      };
+
+      const result = await fetch('http://localhost:3000/api/evidence/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await result.json();
+      if (!result.ok) {
+        throw new Error(data?.error || 'Evidence submission failed.');
+      }
+
+      setResponse(`Evidence accepted: ${data.evidence_count ?? evidence.length} items submitted.`);
+    } catch (err: any) {
+      setError(err.message || 'Unable to submit evidence.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="page-stack">
+      <section className="panel wide-panel">
+        <p className="eyebrow">Evidence</p>
+        <h1>Evidence submission</h1>
+        <p className="lede">Attach URLs, repo links, screenshots, and supporting artifacts to a milestone. Private evidence can be encrypted and stored separately.</p>
+
+        <div className="two-col">
+          <label>
+            <span>Milestone ID</span>
+            <input value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)} />
+          </label>
+          <label>
+            <span>Escrow address</span>
+            <input value={escrowAddress} onChange={(e) => setEscrowAddress(e.target.value)} />
+          </label>
+          <label style={{ gridColumn: '1 / -1' }}>
+            <span>Freelancer wallet</span>
+            <input value={freelancerAddress} onChange={(e) => setFreelancerAddress(e.target.value)} />
+          </label>
+        </div>
+
+        <div className="stack gap-12" style={{ marginTop: 24 }}>
+          {evidence.map((item, index) => (
+            <div key={item.id} className="requirement-row">
+              <div className="requirement-header">
+                <strong>{item.id}</strong>
+                <button className="secondary-button small" onClick={() => removeEvidence(index)}>
+                  Remove
+                </button>
+              </div>
+
+              <div className="builder-grid">
+                <label>
+                  <span>Type</span>
+                  <select
+                    value={item.type}
+                    onChange={(e) => updateEvidence(index, 'type', e.target.value as EvidenceType)}
+                  >
+                    <option value="url">URL</option>
+                    <option value="repository">Repository</option>
+                    <option value="screenshot">Screenshot</option>
+                    <option value="file">File</option>
+                    <option value="text">Text</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Private evidence</span>
+                  <div className="checkbox-row" style={{ marginTop: 10 }}>
+                    <input
+                      type="checkbox"
+                      checked={item.isPrivate}
+                      onChange={(e) => updateEvidence(index, 'isPrivate', e.target.checked)}
+                    />
+                    <span>Encrypt and store privately</span>
+                  </div>
+                </label>
+              </div>
+
+              <label>
+                <span>Content</span>
+                <input
+                  value={item.content}
+                  onChange={(e) => updateEvidence(index, 'content', e.target.value)}
+                  placeholder="https://... or repo link or text value"
+                />
+              </label>
+
+              <label>
+                <span>Notes</span>
+                <textarea
+                  rows={2}
+                  value={item.notes}
+                  onChange={(e) => updateEvidence(index, 'notes', e.target.value)}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+
+        <div className="action-row">
+          <button className="secondary-button" onClick={addEvidenceItem}>
+            Add evidence
+          </button>
+          <button className="primary-button" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Submitting...' : 'Submit evidence'}
+          </button>
+        </div>
+
+        {error && <div className="alert error">{error}</div>}
+        {response && <div className="alert success">{response}</div>}
+      </section>
+    </div>
+  );
+}
